@@ -1,0 +1,31 @@
+# Python
+__pycache__/
+*.pyc
+*.pyo
+.venv/
+venv/
+env/
+
+# Environment / secrets
+.env
+.env.*
+
+# Data (never commit raw or processed datasets)
+data/raw/
+data/processed/
+*.parquet
+*.csv
+
+# Model artifacts
+*.ckpt
+*.pt
+*.pth
+
+# Testing / tooling caches
+.pytest_cache/
+.hypothesis/
+.ipynb_checkpoints/
+
+# Editors
+.vscode/
+.idea/
