@@ -5,6 +5,8 @@ import time
 from contextlib import ContextDecorator
 from types import TracebackType
 
+LATENCY: dict[str, list[float]] = {}
+
 
 def get_logger(name: str) -> logging.Logger:
     logger = logging.getLogger(name)
@@ -17,7 +19,10 @@ def get_logger(name: str) -> logging.Logger:
 
 
 class Timer(ContextDecorator):
-    elapsed_ms: float = 0.0
+    def __init__(self, name: str, target: dict[str, list[float]] | None = None) -> None:
+        self.name = name
+        self.target = LATENCY if target is None else target
+        self.elapsed_ms: float = 0.0
 
     def __enter__(self) -> Timer:
         self._start = time.perf_counter()
@@ -30,4 +35,5 @@ class Timer(ContextDecorator):
         traceback: TracebackType | None,
     ) -> bool:
         self.elapsed_ms = (time.perf_counter() - self._start) * 1000
+        self.target.setdefault(self.name, []).append(self.elapsed_ms)
         return False

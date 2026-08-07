@@ -11,12 +11,12 @@ env/
 .env.*
 
 # Data (never commit raw or processed datasets)
-data/raw/
-data/processed/
+data/
 *.parquet
 *.csv
 
-# Model artifacts
+# Build/training artifacts
+artifacts/
 *.ckpt
 *.pt
 *.pth

@@ -1,22 +1,21 @@
 from __future__ import annotations
 
-import os
 from functools import lru_cache
 
-from dotenv import load_dotenv
-from pydantic import BaseModel, Field
-
-load_dotenv()
+from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
-class Settings(BaseModel):
-    environment: str = Field(default_factory=lambda: os.getenv("ENVIRONMENT", "development"))
-    log_level: str = Field(default_factory=lambda: os.getenv("LOG_LEVEL", "INFO"))
-    redis_url: str = Field(default_factory=lambda: os.getenv("REDIS_URL", "redis://localhost:6379/0"))
-    postgres_dsn: str = Field(
-        default_factory=lambda: os.getenv("POSTGRES_DSN", "postgresql://localhost:5432/discovery")
+class Settings(BaseSettings):
+    model_config = SettingsConfigDict(
+        env_file=".env", env_file_encoding="utf-8", extra="ignore", protected_namespaces=()
     )
-    anthropic_api_key: str | None = Field(default_factory=lambda: os.getenv("ANTHROPIC_API_KEY"))
+
+    environment: str = "development"
+    log_level: str = "INFO"
+    redis_url: str = "redis://localhost:6379/0"
+    pg_dsn: str = "postgresql://localhost:5432/discovery"
+    anthropic_api_key: str | None = None
+    model_version: str = "dev"
 
     embedding_dim: int = 128
     intent_heads: int = 4

@@ -1,2 +1,40 @@
 [tool.pytest.ini_options]
 pythonpath = ["."]
+
+[tool.importlinter]
+root_packages = ["src"]
+
+[[tool.importlinter.contracts]]
+name = "Features only import shared and each other's interface"
+type = "forbidden"
+source_modules = [
+    "src.gateway",
+    "src.session",
+    "src.ranking",
+    "src.guardrails",
+    "src.compliance",
+    "src.explain",
+]
+forbidden_modules = [
+    "src.gateway",
+    "src.session",
+    "src.ranking",
+    "src.guardrails",
+    "src.compliance",
+    "src.explain",
+]
+ignore_imports = ["src.** -> src.*.interface"]
+unmatched_ignore_imports_alerting = "none"
+
+[[tool.importlinter.contracts]]
+name = "shared must not depend on features"
+type = "forbidden"
+source_modules = ["src.shared"]
+forbidden_modules = [
+    "src.gateway",
+    "src.session",
+    "src.ranking",
+    "src.guardrails",
+    "src.compliance",
+    "src.explain",
+]

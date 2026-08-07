@@ -6,7 +6,11 @@ from src.shared.config import Settings, get_settings
 
 
 def test_defaults_match_spec() -> None:
-    settings = Settings()
+    settings = Settings(_env_file=None)
+    assert settings.redis_url == "redis://localhost:6379/0"
+    assert settings.pg_dsn == "postgresql://localhost:5432/discovery"
+    assert settings.anthropic_api_key is None
+    assert settings.model_version == "dev"
     assert settings.embedding_dim == 128
     assert settings.intent_heads == 4
     assert settings.intent_head_collapse_cosine == 0.8
@@ -22,14 +26,18 @@ def test_defaults_match_spec() -> None:
 def test_env_override(monkeypatch: pytest.MonkeyPatch) -> None:
     monkeypatch.setenv("REDIS_URL", "redis://example:6380/1")
     monkeypatch.setenv("ENVIRONMENT", "production")
-    settings = Settings()
+    monkeypatch.setenv("PG_DSN", "postgresql://example:5432/prod")
+    monkeypatch.setenv("MODEL_VERSION", "2026-08-07-a")
+    settings = Settings(_env_file=None)
     assert settings.redis_url == "redis://example:6380/1"
     assert settings.environment == "production"
+    assert settings.pg_dsn == "postgresql://example:5432/prod"
+    assert settings.model_version == "2026-08-07-a"
 
 
 def test_anthropic_key_defaults_to_none(monkeypatch: pytest.MonkeyPatch) -> None:
     monkeypatch.delenv("ANTHROPIC_API_KEY", raising=False)
-    settings = Settings()
+    settings = Settings(_env_file=None)
     assert settings.anthropic_api_key is None
 
 
