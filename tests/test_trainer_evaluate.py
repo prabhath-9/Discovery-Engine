@@ -4,10 +4,13 @@ import math
 from datetime import date
 from pathlib import Path
 
+import numpy as np
 import polars as pl
 import pytest
 
-from trainer.evaluate import evaluate
+from trainer.build_index import build_index
+from trainer.evaluate import evaluate, make_two_tower_recommend_fn, measure_latency_p50_ms, write_results_row
+from trainer.train_towers import UserTower
 
 
 @pytest.fixture()
@@ -98,3 +101,98 @@ def test_evaluate_perfect_recommendations_score_one(fixture_paths: tuple[Path, P
     assert metrics["recall@20"] == pytest.approx(1.0)
     assert metrics["precision@20"] == pytest.approx(1.0)
     assert metrics["ndcg@20"] == pytest.approx(1.0)
+
+
+def test_measure_latency_p50_ms_returns_non_negative_median() -> None:
+    def recommend_fn(user_id: str, history: list[int]) -> list[int]:
+        return [1, 2, 3]
+
+    latency = measure_latency_p50_ms(recommend_fn, [[1], [1], [1]])
+    assert latency >= 0.0
+
+
+def test_measure_latency_p50_ms_empty_histories() -> None:
+    def recommend_fn(user_id: str, history: list[int]) -> list[int]:
+        return []
+
+    assert measure_latency_p50_ms(recommend_fn, []) == 0.0
+
+
+def test_write_results_row_creates_table_and_dedupes_on_rerun(tmp_path: Path) -> None:
+    path = tmp_path / "results.md"
+    metrics = {"recall@20": 0.1234, "ndcg@20": 0.5678, "catalog_coverage": 0.4321}
+
+    write_results_row("Two-tower", metrics, latency_p50_ms=1.5, path=path)
+    first = path.read_text()
+    assert "| Two-tower | 0.1234 | 0.5678 | 0.4321 | 1.50ms |" in first
+    assert first.count("| Two-tower |") == 1
+
+    write_results_row("Two-tower", metrics, latency_p50_ms=2.5, path=path)
+    second = path.read_text()
+    assert second.count("| Two-tower |") == 1
+    assert "2.50ms" in second
+
+
+def test_write_results_row_preserves_other_model_rows(tmp_path: Path) -> None:
+    path = tmp_path / "results.md"
+    metrics = {"recall@20": 0.1, "ndcg@20": 0.2, "catalog_coverage": 0.3}
+
+    write_results_row("Baseline", metrics, latency_p50_ms=1.0, path=path)
+    write_results_row("Two-tower", metrics, latency_p50_ms=2.0, path=path)
+
+    content = path.read_text()
+    assert content.count("| Baseline |") == 1
+    assert content.count("| Two-tower |") == 1
+
+
+def test_make_two_tower_recommend_fn_excludes_history_and_respects_k() -> None:
+    embed_dim = 8
+    n_items = 20
+    rng = np.random.RandomState(0)
+    item_vectors = rng.rand(n_items, embed_dim).astype(np.float32)
+    item_vectors /= np.linalg.norm(item_vectors, axis=1, keepdims=True)
+
+    index = build_index(item_vectors)
+    article_id_to_index = {100 + i: i for i in range(n_items)}
+    index_to_article_id = {i: 100 + i for i in range(n_items)}
+
+    user_tower = UserTower(n_age_band=1, n_region=1, embed_dim=embed_dim)
+    user_tower.eval()
+
+    demo_by_customer = {"u1": (0, 0)}
+    recommend_fn = make_two_tower_recommend_fn(
+        user_tower,
+        demo_by_customer,
+        item_vectors,
+        article_id_to_index,
+        index_to_article_id,
+        index,
+        session_length=20,
+        k=5,
+    )
+
+    history = [100, 101, 102]
+    recommended = recommend_fn("u1", history)
+
+    assert len(recommended) == 5
+    assert set(recommended).isdisjoint(history)
+
+
+def test_make_two_tower_recommend_fn_handles_empty_history() -> None:
+    embed_dim = 8
+    n_items = 10
+    item_vectors = np.random.RandomState(1).rand(n_items, embed_dim).astype(np.float32)
+    item_vectors /= np.linalg.norm(item_vectors, axis=1, keepdims=True)
+
+    index = build_index(item_vectors)
+    article_id_to_index = {100 + i: i for i in range(n_items)}
+    index_to_article_id = {i: 100 + i for i in range(n_items)}
+
+    user_tower = UserTower(n_age_band=1, n_region=1, embed_dim=embed_dim)
+    user_tower.eval()
+
+    recommend_fn = make_two_tower_recommend_fn(
+        user_tower, {}, item_vectors, article_id_to_index, index_to_article_id, index, session_length=20, k=3
+    )
+
+    assert len(recommend_fn("cold_start_user", [])) == 3
