@@ -30,6 +30,20 @@ def test_redis_client_parses_url_from_explicit_settings() -> None:
     assert kwargs["decode_responses"] is True
 
 
+def test_redis_client_sets_socket_timeouts() -> None:
+    client = db.get_redis_client()
+    kwargs = client.connection_pool.connection_kwargs
+    assert kwargs["socket_timeout"] == db.REDIS_SOCKET_TIMEOUT_S
+    assert kwargs["socket_connect_timeout"] == db.REDIS_SOCKET_CONNECT_TIMEOUT_S
+
+
+def test_redis_client_explicit_settings_sets_socket_timeouts() -> None:
+    client = db.get_redis_client(Settings(redis_url="redis://other:6379/0", _env_file=None))
+    kwargs = client.connection_pool.connection_kwargs
+    assert kwargs["socket_timeout"] == db.REDIS_SOCKET_TIMEOUT_S
+    assert kwargs["socket_connect_timeout"] == db.REDIS_SOCKET_CONNECT_TIMEOUT_S
+
+
 def test_redis_client_is_a_lazily_initialised_singleton() -> None:
     first = db.get_redis_client()
     second = db.get_redis_client()
