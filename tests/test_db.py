@@ -58,6 +58,34 @@ def test_pg_connection_is_a_lazily_initialised_singleton(monkeypatch: pytest.Mon
     assert calls == [db.get_settings().pg_dsn]
 
 
+def test_pg_connection_passes_connect_timeout(monkeypatch: pytest.MonkeyPatch) -> None:
+    kwargs_seen: list[dict[str, Any]] = []
+
+    def fake_connect(dsn: str, **kwargs: Any) -> _FakePGConnection:
+        kwargs_seen.append(kwargs)
+        return _FakePGConnection(dsn)
+
+    monkeypatch.setattr(db.psycopg2, "connect", fake_connect)
+
+    db.get_pg_connection()
+
+    assert kwargs_seen == [{"connect_timeout": db.PG_CONNECT_TIMEOUT_S}]
+
+
+def test_pg_connection_explicit_settings_passes_connect_timeout(monkeypatch: pytest.MonkeyPatch) -> None:
+    kwargs_seen: list[dict[str, Any]] = []
+
+    def fake_connect(dsn: str, **kwargs: Any) -> _FakePGConnection:
+        kwargs_seen.append(kwargs)
+        return _FakePGConnection(dsn)
+
+    monkeypatch.setattr(db.psycopg2, "connect", fake_connect)
+
+    db.get_pg_connection(Settings(pg_dsn="postgresql://other:5432/x", _env_file=None))
+
+    assert kwargs_seen == [{"connect_timeout": db.PG_CONNECT_TIMEOUT_S}]
+
+
 def test_pg_connection_reconnects_if_closed(monkeypatch: pytest.MonkeyPatch) -> None:
     calls: list[str] = []
 
