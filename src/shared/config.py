@@ -14,6 +14,7 @@ class Settings(BaseSettings):
     log_level: str = "INFO"
     redis_url: str = "redis://localhost:6379/0"
     pg_dsn: str = "postgresql://localhost:5432/discovery"
+    retrieval_service_url: str = "http://localhost:8001"
     anthropic_api_key: str | None = None
     model_version: str = "dev"
 
