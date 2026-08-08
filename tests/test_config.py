@@ -9,7 +9,7 @@ def test_defaults_match_spec() -> None:
     settings = Settings(_env_file=None)
     assert settings.redis_url == "redis://localhost:6379/0"
     assert settings.pg_dsn == "postgresql://localhost:5432/discovery"
-    assert settings.retrieval_service_url == "http://localhost:8001"
+    assert settings.retrieval_service_url == "http://localhost:8000"
     assert settings.anthropic_api_key is None
     assert settings.model_version == "dev"
     assert settings.embedding_dim == 128

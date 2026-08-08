@@ -121,6 +121,7 @@ class ItemOut(BaseModel):
 class GuardrailsOut(BaseModel):
     diversity_cap_applied: bool
     items_dropped: int
+    filters_fired: dict[str, int]
 
 
 class FeedResponse(BaseModel):
@@ -681,7 +682,9 @@ def feed(request: FeedRequest, background_tasks: BackgroundTasks) -> FeedRespons
             IntentOut(label=i.label, confidence=round(i.weight, 4), slots=slot_counts.get(i.label, 0)) for i in intents
         ]
         guardrails_out = GuardrailsOut(
-            diversity_cap_applied=report.dropped.get("cap_category", 0) > 0, items_dropped=sum(report.dropped.values())
+            diversity_cap_applied=report.dropped.get("cap_category", 0) > 0,
+            items_dropped=sum(report.dropped.values()),
+            filters_fired={name: count for name, count in report.dropped.items() if count > 0},
         )
 
     response = FeedResponse(
@@ -756,7 +759,9 @@ def bundles(request: BundlesRequest, background_tasks: BackgroundTasks) -> Bundl
             for c in filtered
         ]
         guardrails_out = GuardrailsOut(
-            diversity_cap_applied=report.dropped.get("cap_category", 0) > 0, items_dropped=sum(report.dropped.values())
+            diversity_cap_applied=report.dropped.get("cap_category", 0) > 0,
+            items_dropped=sum(report.dropped.values()),
+            filters_fired={name: count for name, count in report.dropped.items() if count > 0},
         )
 
     response = BundlesResponse(
@@ -832,7 +837,9 @@ def search(request: SearchRequest, background_tasks: BackgroundTasks) -> SearchR
             for c in filtered
         ]
         guardrails_out = GuardrailsOut(
-            diversity_cap_applied=report.dropped.get("cap_category", 0) > 0, items_dropped=sum(report.dropped.values())
+            diversity_cap_applied=report.dropped.get("cap_category", 0) > 0,
+            items_dropped=sum(report.dropped.values()),
+            filters_fired={name: count for name, count in report.dropped.items() if count > 0},
         )
 
     response = SearchResponseBody(
